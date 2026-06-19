@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-This project implements an 8-bit Harvard Architecture CPU using Verilog HDL. Unlike traditional SAP-1 style processors that use a single memory and a limited instruction set, this design utilizes separate instruction and data memories, enabling a cleaner memory architecture and improved scalability.
+This project implements an 8-bit Harvard Architecture inspired CPU using Verilog HDL. Unlike traditional SAP-1 style processors that use a single memory and a limited instruction set, this design utilizes separate instruction and data memories, enabling a cleaner memory architecture and improved scalability.
 
 The processor executes instructions using a multi-cycle control unit based on T-state sequencing. Each instruction progresses through fetch, decode, and execute phases using a dedicated timing counter and control logic.
 
