@@ -32,7 +32,7 @@ The processor executes instructions using a multi-cycle control unit based on T-
 
 | Opcode | Instruction | Description                              |
 | ------ | ----------- | ---------------------------------------- |
-| 0000   | POPCNT      | Count number of set bits in A            |
+| 0000   | NOP         | No Operation                             |
 | 0001   | LDA         | Load accumulator from Data RAM           |
 | 0010   | STA         | Store accumulator to Data RAM            |
 | 0011   | ADD         | Add memory operand to accumulator        |
@@ -42,7 +42,7 @@ The processor executes instructions using a multi-cycle control unit based on T-
 | 0111   | JC          | Jump if carry flag is set                |
 | 1000   | JZ          | Jump if zero flag is set                 |
 | 1001   | OUT         | Send accumulator to output register      |
-| 1010   | IN          | Load accumulator from external input     |
+| 1010   | POPCNT      | Count number of set bits in A            |
 | 1011   | AND         | Bitwise AND                              |
 | 1100   | OR          | Bitwise OR                               |
 | 1101   | THRESHOLD   | Generate threshold-based result          |
