@@ -246,4 +246,3 @@ This project demonstrates the complete implementation of an educational 8-bit Ha
 ## Resources
 
 * [Ben Eater's video series](https://eater.net/8bit/)
-* [Steven Bell's microprocessor](https://stanford.edu/~sebell/oc_projects/ic_design_finalreport.pdf)
