@@ -8,7 +8,8 @@
 ╚█████╔╝    ██████╔╝██║   ██║   
  ╚════╝     ╚═════╝ ╚═╝   ╚═╝   
 ```
-
+<div align="center">
+ 
 # 8-Bit Harvard Architecture CPU
 ### Designed in Verilog HDL — Multi-Cycle • Custom ISA • FPGA-Ready
 
