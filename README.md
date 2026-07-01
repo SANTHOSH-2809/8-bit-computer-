@@ -49,30 +49,57 @@
 
 ---
 
-## Overview
+## 🚀 Overview
 
-This project implements a fully custom **8-bit Harvard-architecture CPU** from scratch in Verilog HDL, inspired by classic breadboard computer designs (SAP-1 style) but extended with a richer instruction set, separate instruction/data memories, condition flags, and dedicated FPGA I/O for live program execution and visualization on seven-segment displays.
+This project implements a fully custom 8-bit Harvard-inspired CPU from scratch in Verilog HDL, designed for FPGA implementation. Inspired by the simplicity of SAP-1, the processor extends the architecture with separate Instruction (IRAM) and Data (DRAM) memories, a 5-stage T-state control sequencer (T0–T4), an enhanced custom ISA, and modular RTL components.
 
-The CPU is built around a **5-stage T-state control sequencer** (T0–T4), a shared internal **bus architecture**, and a **16-instruction custom ISA** supporting arithmetic, logic, bit-counting, thresholding, and conditional branching.
+Unlike a traditional Von Neumann processor, instructions and data are stored in independent memory banks, while a shared 8-bit internal bus efficiently interconnects the CPU modules. A Memory Address Register (MAR) stores both the memory address and memory selection, allowing seamless access to either memory during execution.
 
-<!-- HERO / HOW IT WORKS IMAGE -->
-<p align="center">
-<img src="PASTE_HOW_IT_WORKS_IMAGE_LINK_HERE" alt="How it works" width="70%">
-</p>
+The processor features a hardwired Control Unit, Program Counter, Instruction Register, ALU, A/B Registers, Flag Register, and Output Register, working together to execute 16 custom instructions including arithmetic, logic, branching, bitwise count in accumulator, threshold detection, and shift operations. The ALU automatically updates the Carry, Zero, and Threshold flags for conditional execution.
 
+**Operating Mode**
+
+Three operating modes are supported:
+
+-  **Programming Mode** — Load instructions into **IRAM** and data into **DRAM** directly from the FPGA switches.
+
+-  **Execution Mode** — Execute programs starting from address `0x0`, with manual clock control, CPU reset, and automatic termination using the `HLT` instruction while preserving memory contents.
+
+-  **Clock Speed Mode** — Select the CPU clock frequency:
+    - `0` → **Slow Mode** (0.5 Hz) for step-by-step observation and debugging.
+    - `1` → **Fast Mode** (50 Hz) for faster program execution.
+      
+-  Hardware Controls
+
+| Control | Function |
+|----------|----------|
+| **MEM_SEL Switch** | Selects **IRAM** (`0`) or **DRAM** (`1`) during programming. |
+| **Address Switches** | Select the 4-bit memory address. |
+| **Data Switches** | Provide the 8-bit instruction or data value. |
+| **Enter Button** | Stores the selected data into the selected memory address. |
+| **CPU Reset Button** | Resets the CPU state while preserving IRAM and DRAM contents. |
+| **RAM Reset Button** | Clears both IRAM and DRAM memories. |
+| **Run/Clock Enable Switch** | Starts or pauses CPU execution. |
+
+> [!NOTE]
+> **Harvard-Inspired Architecture**
+>
+> This processor follows a **Harvard-inspired architecture** rather than a classical Harvard architecture. It features **separate Instruction RAM (IRAM)** and **Data RAM (DRAM)**, while both memories communicate over a **shared 8-bit system bus**.
+>
+> This hybrid approach preserves the advantages of separate instruction and data storage while reducing hardware complexity, simplifying bus routing, and minimizing FPGA resource utilization.
 ---
 
-## Features
+## 🛠️ Features
 
-- 🧠 **Harvard Architecture** — separate instruction RAM (`iram`) and data RAM (`dram`)
-- ⚙️ **Custom 16-Instruction ISA** — including `POPCNT` and `THRESHOLD` (not found in classic SAP-1 designs)
-- 🔁 **Multi-Cycle Control Unit** — 5 T-states (T0 Fetch → T1 Fetch → T2/T3/T4 Decode/Execute)
-- 🚦 **Condition Flags** — Carry, Zero, Threshold — driving conditional jumps (`JC`, `JZ`)
-- 📺 **Dual Seven-Segment Output** — live output register + program counter display
-- 🔌 **In-System RAM Programming** — load instructions/data directly via FPGA switches before run
-- 💡 **LED Microinstruction Debug Output** — every control signal (`CO`, `RO`, `AI`, `DRI`, etc.) mapped to a physical LED
-- 🛠️ **FPGA-Ready** — targets Xilinx Spartan-7 (`xc7s50csga324-1`)
-
+| Feature | Description |
+|---------|-------------|
+| **Harvard Architecture** | Separate instruction RAM (`iram`) and data RAM (`dram`) |
+|  **Custom 16-Instruction ISA** | Includes `POPCNT` and `THRESHOLD` (not found in classic SAP-1 designs) |
+|  **Multi-Cycle Control Unit** | 5 T-states (T0 Fetch → T1 Fetch → T2/T3/T4 Decode/Execute) |
+|  **Condition Flags** | Carry, Zero, Threshold driving conditional jumps (`JC`, `JZ`) |
+|  **Dual Seven-Segment Output** | Live output register + program counter display |
+|  **In-System RAM Programming** | program instructions/data directly via FPGA switches before execution |
+|  **FPGA-Ready** | Targets Xilinx Spartan-7 (`xc7s50csga324-1`) |
 ---
 
 ## Architecture
@@ -82,54 +109,36 @@ The CPU is built around a **5-stage T-state control sequencer** (T0–T4), a sha
 <img src="PASTE_ARCHITECTURE_DIAGRAM_LINK_HERE" alt="CPU block architecture" width="75%">
 </p>
 
-```
-                  +-------------+
-                  |     PC      |
-                  +-------------+
-                         |
-                         v
-                  +-------------+
-                  |     MAR     |
-                  +-------------+
-                   /           \
-                  /             \
-       Instruction RAM        Data RAM
-            |                     |
-            +-------- BUS --------+
-                       |
-              +--------+--------+
-              |        |        |
-           Reg A     Reg B    Output Reg
-              |        |        |
-              +---  ALU  ------+
-                       |
-                  Flags (C, Z, T)
-                       |
-                  7-Segment Display
-```
+
 
 ---
 ## 🏗️ Architecture Comparison
 
-| Feature | 🖥️ Von Neumann Architecture | 🚀 My Harvard-Inspired Architecture |
-|---------|------------------------------|-------------------------------------|
-| **Program Memory** | Shared with data | Dedicated **Instruction RAM (IRAM)** |
-| **Data Memory** | Shared with instructions | Dedicated **Data RAM (DRAM)** |
-| **Memory Organization** | Single memory stores both instructions and data | Separate memories for instructions and data |
-| **Internal Bus** | Single shared bus | Single shared bus (simplified Harvard design) |
-| **Instruction Safety** | Instructions can be accidentally overwritten by data writes | Program memory is isolated from data writes |
-| **Memory Capacity** | Code and data compete for the same memory space | Full IRAM available for code and full DRAM available for data |
-| **Maximum Program Size** | Limited by shared memory usage | Larger program storage since instruction memory is dedicated |
-| **Maximum Data Storage** | Reduced when program size increases | Fixed data storage independent of program size |
-| **Control Logic** | Must distinguish code and data within the same memory | Simpler memory selection using `MEM_SEL` |
-| **Instruction Fetch** | Fetches instructions from shared memory | Always fetches instructions from IRAM |
-| **Data Access** | Reads/Writes from the same memory | Reads/Writes only from DRAM |
-| **Self-Modifying Code** | Possible | Prevented by memory separation |
-| **Parallel Instruction/Data Access** | ❌ No | ❌ No (shared internal bus) |
-| **Hardware Complexity** | Simpler memory organization | Slightly higher due to dual memories |
-| **Educational Value** | Demonstrates shared-memory architecture | Demonstrates Harvard memory organization with simplified hardware |
+| Feature | 🖥️ Classical Von Neumann | ⚡ Classical Harvard | 📥 My Harvard-Inspired CPU |
+|---------|---------------------------|----------------------|----------------------------|
+| **Instruction Memory** | Shared with data | Dedicated | Dedicated **IRAM** |
+| **Data Memory** | Shared with instructions | Dedicated | Dedicated **DRAM** |
+| **Memory Organization** | Single unified memory | Separate memories | Separate memories |
+| **Instruction Bus** | Shared | Dedicated | Shared internal bus |
+| **Data Bus** | Shared | Dedicated | Shared internal bus |
+| **Instruction Fetch** | Shared memory | IRAM only | IRAM only |
+| **Data Access** | Shared memory | DRAM only | DRAM only |
+| **Parallel Instruction & Data Access** | ❌ No | ✅ Yes | ❌ No |
+| **Instruction Safety** | Code can be overwritten | Code isolated | Code isolated |
+| **Self-Modifying Code** | Possible | Not supported | Not supported |
+| **Program Capacity** | Shared with data | Dedicated program memory | Full IRAM reserved for instructions |
+| **Data Capacity** | Reduced by program size | Dedicated data memory | Full DRAM reserved for data |
+| **Memory Selection Logic** | Address-based | Separate buses | `MEM_SEL` + MAR |
+| **Hardware Complexity** | ⭐ Low | ⭐⭐⭐ High | ⭐⭐ Moderate |
+| **FPGA Resource Usage** | Low | High | Moderate |
+| **Educational Value** | Basic computer architecture | High-performance architecture | Harvard concepts with simplified hardware |
 
-> **Note:** This project implements a **Harvard-inspired architecture**, not a full classical Harvard architecture. While it uses separate **Instruction RAM (IRAM)** and **Data RAM (DRAM)**, both memories communicate with the CPU through a **shared internal 8-bit bus**. This design preserves the key advantages of memory separation while keeping the hardware simple and resource-efficient for FPGA implementation.
+> [!NOTE]
+> **Harvard-Inspired Architecture**
+>
+> This processor follows a **Harvard-inspired architecture** rather than a classical Harvard architecture. It features **separate Instruction RAM (IRAM)** and **Data RAM (DRAM)**, while both memories communicate over a **shared 8-bit system bus**.
+>
+> This hybrid approach preserves the advantages of separate instruction and data storage while reducing hardware complexity, simplifying bus routing, and minimizing FPGA resource utilization.
 
 ## Datapath Diagram
 
