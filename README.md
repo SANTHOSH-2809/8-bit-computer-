@@ -8,13 +8,9 @@
 ╚█████╔╝    ██████╔╝██║   ██║   
  ╚════╝     ╚═════╝ ╚═╝   ╚═╝   
 ```
-<div align="center">
  
 # 8-Bit Harvard Architecture CPU
 ### Designed in Verilog HDL — Multi-Cycle • Custom ISA • FPGA-Ready
-
-<!-- BANNER IMAGE — paste your 1280x640 banner link here -->
-<img src="PASTE_BANNER_IMAGE_LINK_HERE" alt="8-bit Harvard CPU banner" width="100%">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Verilog](https://img.shields.io/badge/Language-Verilog%20HDL-blue)
@@ -36,7 +32,7 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
-- [Architecture Comparison](#architecture-comparison)
+- [Architecture Comparison](#architecturecomparison)
 - [Datapath Diagram](#datapath-diagram)
 - [Instruction Set](#instruction-set)
 - [Timing Diagram](#timing-diagram)
