@@ -31,9 +31,9 @@
 - [Features](#features)
 - [Architecture](#architecture)
 - [Architecture Comparison](#architecturecomparison)
-- [⏱️ Instruction Timing & Microinstruction Table](#InstructionTiming&MicroinstructionTable)
+- [Data Flow](#dataflow)
 - [Instruction Set](#instruction-set)
-- [Timing Diagram](#timing-diagram)
+- [⏱️ Instruction Timing & Microinstruction Table](#InstructionTiming&MicroinstructionTable)
 - [Microinstruction Description](#MicroinstructionDescription)
 - [Simulation Results](#simulation-results)
 - [FPGA Implementation](#fpga-implementation)
@@ -43,6 +43,7 @@
 - [Statistics](#statistics)
 - [Contributing](#contributing)
 - [License](#license)
+
 
 ---
 
@@ -139,6 +140,49 @@ Three operating modes are supported:
 >
 > This hybrid approach preserves the advantages of separate instruction and data storage while reducing hardware complexity, simplifying bus routing, and minimizing FPGA resource utilization.
 
+
+---
+## Data Flow
+```mermaid
+flowchart LR
+
+PC["Program Counter (PC)"]
+BUS["8-bit System Bus"]
+MAR["Memory Address Register (MAR)<br/>Address + Memory Select"]
+IRAM["Instruction RAM (IRAM)"]
+DRAM["Data RAM (DRAM)"]
+IR["Instruction Register (IR)"]
+CU["Control Unit<br/>+ T-State Controller"]
+REG["Register A / Register B"]
+ALU["Arithmetic Logic Unit (ALU)"]
+FLAGS["Flag Register<br/>(C, Z, T)"]
+OUT["Output Register"]
+
+PC --> BUS
+BUS --> MAR
+
+MAR --> IRAM
+MAR --> DRAM
+
+IRAM --> BUS
+DRAM --> BUS
+
+BUS --> IR
+IR --> CU
+
+CU --> REG
+CU --> ALU
+CU --> DRAM
+CU --> FLAGS
+CU --> OUT
+
+REG --> ALU
+ALU --> BUS
+BUS --> REG
+
+ALU --> FLAGS
+BUS --> OUT
+```
 ---
 
 ## Instruction Set
@@ -249,23 +293,8 @@ T4 — Execute:  ALU result written back, flags updated
 
 ## Simulation Results
 
+### All 16 instruction verified waveform
 
-### Addition
-<img src="PASTE_ADDITION_WAVEFORM_LINK_HERE" alt="Addition waveform" width="80%">
-
-### Subtraction
-<img src="PASTE_SUBTRACTION_WAVEFORM_LINK_HERE" alt="Subtraction waveform" width="80%">
-
-### POPCNT
-<img src="PASTE_POPCNT_WAVEFORM_LINK_HERE" alt="POPCNT waveform" width="80%">
-
-### THRESHOLD
-<img src="PASTE_THRESHOLD_WAVEFORM_LINK_HERE" alt="Threshold waveform" width="80%">
-
-### Conditional Jump (JC / JZ)
-<img src="PASTE_JUMP_WAVEFORM_LINK_HERE" alt="Conditional jump waveform" width="80%">
-
-### Store / Load
 <img src="PASTE_STORE_LOAD_WAVEFORM_LINK_HERE" alt="Store/Load waveform" width="80%">
 
 ---
