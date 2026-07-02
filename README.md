@@ -1,10 +1,10 @@
 ```
-                                                    █████╗     ██████╗ ██╗████████╗
-                                                   ██╔══██╗    ██╔══██╗██║╚══██╔══╝
-                                                   ╚█████╔╝    ██████╔╝██║   ██║   
-                                                   ██╔══██╗    ██╔══██╗██║   ██║   
-                                                   ╚█████╔╝    ██████╔╝██║   ██║   
-                                                    ╚════╝     ╚═════╝ ╚═╝   ╚═╝   
+     █████╗     ██████╗ ██╗████████╗
+    ██╔══██╗    ██╔══██╗██║╚══██╔══╝
+    ╚█████╔╝    ██████╔╝██║   ██║
+    ██╔══██╗    ██╔══██╗██║   ██║   
+    ╚█████╔╝    ██████╔╝██║   ██║   
+     ╚════╝     ╚═════╝ ╚═╝   ╚═╝   
 ```
  
 # 8-Bit Harvard Architecture CPU
@@ -31,16 +31,13 @@
 - [Features](#features)
 - [Architecture](#architecture)
 - [Architecture Comparison](#architecturecomparison)
-- [Datapath Diagram](#datapath-diagram)
+- [⏱️ Instruction Timing & Microinstruction Table](#InstructionTiming&MicroinstructionTable)
 - [Instruction Set](#instruction-set)
 - [Timing Diagram](#timing-diagram)
-- [Bus Activity per Instruction](#bus-activity-per-instruction)
-- [Repository Structure](#repository-structure)
+- [Microinstruction Description](#MicroinstructionDescription)
 - [Simulation Results](#simulation-results)
 - [FPGA Implementation](#fpga-implementation)
 - [Getting Started](#getting-started)
-- [Example Programs](#example-programs)
-- [Feature Comparison](#feature-comparison)
 - [Project Progress](#project-progress)
 - [Roadmap](#roadmap)
 - [Statistics](#statistics)
@@ -53,7 +50,9 @@
 
 This project implements a fully custom 8-bit Harvard-inspired CPU from scratch in Verilog HDL, designed for FPGA implementation. Inspired by the simplicity of SAP-1, the processor extends the architecture with separate Instruction (IRAM) and Data (DRAM) memories, a 5-stage T-state control sequencer (T0–T4), an enhanced custom ISA, and modular RTL components.
 
-Unlike a traditional Von Neumann processor, instructions and data are stored in independent memory banks, while a shared 8-bit internal bus efficiently interconnects the CPU modules. A Memory Address Register (MAR) stores both the memory address and memory selection, allowing seamless access to either memory during execution.
+This design also introduces a dedicated T-State Control Module with a custom CLRT (Clear T-State) microinstruction, allowing instructions to terminate immediately after completion instead of always executing all six T-states. By resetting the timing sequencer early, shorter instructions complete in fewer clock cycles, improving execution efficiency while preserving a simple hardwired control architecture.
+
+Unlike a traditional Von Neumann processor, instructions and data are stored in independent memory banks, while a shared 8-bit internal bus efficiently interconnects the CPU modules. A Memory Address Register (MAR) stores both the memory address and memory selection by custom MEM_SEL (memory selection), allowing seamless access to either memory during execution.
 
 The processor features a hardwired Control Unit, Program Counter, Instruction Register, ALU, A/B Registers, Flag Register, and Output Register, working together to execute 16 custom instructions including arithmetic, logic, branching, bitwise count in accumulator, threshold detection, and shift operations. The ALU automatically updates the Carry, Zero, and Threshold flags for conditional execution.
 
@@ -140,13 +139,6 @@ Three operating modes are supported:
 >
 > This hybrid approach preserves the advantages of separate instruction and data storage while reducing hardware complexity, simplifying bus routing, and minimizing FPGA resource utilization.
 
-## Datapath Diagram
-
-<!-- DETAILED DATAPATH SCREENSHOT FROM VIVADO/SCHEMATIC -->
-<p align="center">
-<img src="PASTE_DATAPATH_IMAGE_LINK_HERE" alt="Datapath diagram" width="85%">
-</p>
-
 ---
 
 ## Instruction Set
@@ -170,14 +162,10 @@ Three operating modes are supported:
 | 1110   | `SHL`       | 0xE   | Shift A left by 1                              |
 | 1111   | `HLT`       | 0xF   | Halt execution                                 |
 
-<!-- COLORFUL ISA TABLE WITH ICONS — optional image version -->
-<p align="center">
-<img src="PASTE_ISA_TABLE_IMAGE_LINK_HERE" alt="Instruction set table" width="70%">
-</p>
-
 ---
 
-## Timing Diagram
+## ⏱️ Instruction Timing & Microinstruction Table
+
 
 Each instruction executes across up to 5 T-states:
 
@@ -188,108 +176,79 @@ T2 — Decode:   opcode-dependent micro-op begins
 T3 — Execute:  operand fetch / ALU input staging
 T4 — Execute:  ALU result written back, flags updated
 ```
+<br>
 
-<!-- WAVEFORM / TIMING SCREENSHOT FROM VIVADO -->
-<p align="center">
-<img src="PASTE_TIMING_DIAGRAM_IMAGE_LINK_HERE" alt="Timing diagram" width="85%">
-</p>
+> [!TIP]
+> **Conditional Branch Instructions**
+>
+> - 🔀 **`JC` (Jump if Carry):** The jump is performed **only when the Carry Flag (`CF`) is set (`CF = 1`)**.
+> - 🎯 **`JZ` (Jump if Zero):** The jump is performed **only when the Zero Flag (`ZF`) is set (`ZF = 1`)**.
 
----
+<br>
 
-## Bus Activity per Instruction
+| Opcode | Mnemonic | T0 | T1 | T2 | T3 | T4 |
+|:-----:|:---------|:---|:---|:---|:---|:---|
+| `0x0` | **NOP** | `CO MI` | `RO II CE` | `CLR_T` | — | — |
+| `0x1` | **LDA** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `RO AI CLR_T` | — |
+| `0x2` | **STA** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `AO DRI CLR_T` | — |
+| `0x3` | **ADD** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `RO BI` | `EO FE AI FI CLR_T` |
+| `0x4` | **SUB** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `RO BI` | `EO FE AI FI CLR_T` |
+| `0x5` | **LDI** | `CO MI` | `RO II CE` | `IO AI CLR_T` | — | — |
+| `0x6` | **JMP** | `CO MI` | `RO II CE` | `IO J CLR_T` | — | — |
+| `0x7` | **JC** | `CO MI` | `RO II CE` | `IO J CLR_T*` | — | — |
+| `0x8` | **JZ** | `CO MI` | `RO II CE` | `IO J CLR_T*` | — | — |
+| `0x9` | **OUT** | `CO MI` | `RO II CE` | `AO OI CLR_T` | — | — |
+| `0xA` | **POPCNT** | `CO MI` | `RO II CE` | `EO FE AI FI CLR_T` | — | — |
+| `0xB` | **AND** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `RO BI` | `EO FE AI FI CLR_T` |
+| `0xC` | **OR** | `CO MI` | `RO II CE` | `IO MI MEM_SEL` | `RO BI` | `EO FE AI FI CLR_T` |
+| `0xD` | **THRESHOLD** | `CO MI` | `RO II CE` | `EO FE AI FI CLR_T` | — | — |
+| `0xE` | **SHL** | `CO MI` | `RO II CE` | `EO AI FI CLR_T` | — | — |
+| `0xF` | **HLT** | `CO MI` | `RO II CE` | `HLT_1` | — | — |
 
-```
-LDA / STA / ADD / SUB / AND / OR:
-  T0: PC  --> BUS --> MAR
-  T1: RAM --> BUS --> IR          (CE: PC++)
-  T2: IR(operand) --> BUS --> MAR
-  T3: RAM --> BUS --> B  (or A --> BUS --> RAM for STA)
-  T4: ALU --> BUS --> A           (flags updated)
 
-LDI:
-  T0: PC --> BUS --> MAR
-  T1: RAM --> BUS --> IR          (CE: PC++)
-  T2: IR(operand) --> BUS --> A
-
-JMP / JC / JZ:
-  T0: PC --> BUS --> MAR
-  T1: RAM --> BUS --> IR          (CE: PC++)
-  T2: IR(operand) --> BUS --> PC  (conditional on flag)
-
-OUT:
-  T0: PC --> BUS --> MAR
-  T1: RAM --> BUS --> IR          (CE: PC++)
-  T2: A --> BUS --> OUT_REG
-```
-
----
-
-## Repository Structure
-
-```
-8bit-harvard-cpu/
-│
-├── README.md
-├── LICENSE
-├── CONTRIBUTING.md
-├── CHANGELOG.md
-│
-├── docs/
-│   ├── architecture.md
-│   ├── instruction_set.md
-│   ├── control_signals.md
-│   ├── datapath.md
-│   ├── timing_diagram.md
-│   ├── memory_map.md
-│   └── developer_notes.md
-│
-├── rtl/
-│   ├── top_module.v
-│   ├── cpu_top.v
-│   ├── alu.v
-│   ├── control_unit.v
-│   ├── pc.v
-│   ├── mar.v
-│   ├── ir.v
-│   ├── reg_a.v
-│   ├── reg_b.v
-│   ├── ram.v
-│   ├── bus_mux.v
-│   ├── flag_register.v
-│   ├── output_register.v
-│   ├── t_state_counter.v
-│   ├── clock_divider.v
-│   └── seven_seg_driver.v
-│
-├── sim/
-│   ├── tb_top_module.v
-│   ├── waveforms/
-│   └── test_programs/
-│
-├── images/
-│   ├── architecture.png
-│   ├── datapath.png
-│   ├── timing.png
-│   ├── demo.gif
-│   └── fpga.jpg
-│
-├── programs/
-│   ├── addition.asm
-│   ├── threshold.asm
-│   ├── popcnt.asm
-│   └── conditional_jump.asm
-│
-└── fpga/
-    ├── top_module.xdc
-    ├── vivado_project/
-    └── bitstream/
-```
+> [!NOTE]
+> **Optimized Instruction Timing with `CLR_T`**
+>
+> Unlike the original **SAP-1** architecture, where every instruction always consumes **6 T-states**, this processor features a dedicated **T-State Control Module** with the custom **`CLR_T`** microinstruction. `CLR_T` resets the timing sequencer immediately after an instruction completes, eliminating unnecessary execution cycles.
+>
+> **Execution time is therefore variable based on instruction complexity:**
+> - ⚡ **3 T-states:** `NOP`, `LDI`, `JMP`, `JC`, `JZ`, `OUT`, `POPCNT`, `THRESHOLD`, `SHL`, `HLT`
+> - 📦 **4 T-states:** `LDA`, `STA`
+> - ➕ **5 T-states (maximum):** `ADD`, `SUB`, `AND`, `OR`
+>
+> This optimization reduces clock cycles, improves overall execution efficiency, and retains the simplicity of a **hardwired control unit** without increasing architectural complexity.
 
 ---
+
+## 📖 Microinstruction Description
+
+| Control Signal | Description |
+|:--------------:|-------------|
+| **CO** | Enables the **Program Counter (PC)** to place its address onto the shared system bus. |
+| **MI** | Loads the value on the bus into the **Memory Address Register (MAR)**. |
+| **RO** | Enables the selected memory (**IRAM** or **DRAM**) to place its data onto the shared bus. |
+| **II** | Loads the instruction from the bus into the **Instruction Register (IR)**. |
+| **CE** | Increments the **Program Counter (PC)** to point to the next instruction. |
+| **IO** | Places the **operand field** (lower 4 bits) of the Instruction Register onto the bus (zero-extended to 8 bits). |
+| **AI** | Loads the value on the bus into **Register A (Accumulator)**. |
+| **BI** | Loads the value on the bus into **Register B**, used as the second ALU operand. |
+| **AO** | Enables **Register A** to place its contents onto the shared bus. |
+| **BO** | Enables **Register B** to place its contents onto the shared bus *(reserved for future use in the current design).* |
+| **EO** | Enables the **ALU output** to drive the shared system bus. |
+| **FE** | Enables the ALU's **special function operations**, such as **POPCNT** and **THRESHOLD**. |
+| **OI** | Loads the value on the bus into the **Output Register** for display on the seven-segment display. |
+| **DRI** | Writes the value on the bus into the selected **Data RAM (DRAM)** location. |
+| **J** | Loads the Program Counter with the address on the bus to perform a **jump** operation. |
+| **FI** | Updates the **Flag Register** (Carry, Zero, and Threshold flags) using the ALU result. |
+| **MEM_SEL** | Selects the active memory bank: **0 = Instruction RAM (IRAM)**, **1 = Data RAM (DRAM)**. |
+| **CLR_T** | Clears the **T-State Counter**, returning execution to the instruction fetch cycle (**T0**). |
+| **HLT_1** | Halts CPU execution by stopping further T-state progression and clock advancement. |
+---
+
+
 
 ## Simulation Results
 
-<!-- Add one screenshot row per test case -->
 
 ### Addition
 <img src="PASTE_ADDITION_WAVEFORM_LINK_HERE" alt="Addition waveform" width="80%">
@@ -399,21 +358,6 @@ HLT
 
 ---
 
-## Feature Comparison
-
-| Feature                  | SAP-1 | This CPU |
-|---------------------------|:-----:|:--------:|
-| Harvard Architecture       | ❌    | ✅       |
-| POPCNT instruction         | ❌    | ✅       |
-| Threshold instruction      | ❌    | ✅       |
-| Conditional Jumps (JC/JZ)  | ❌    | ✅       |
-| Dual 7-Segment Output      | ❌    | ✅       |
-| Separate I/D Memories      | ❌    | ✅       |
-| Multi-Cycle Control        | ✅    | ✅       |
-| FPGA Ready                 | ❌    | ✅       |
-| LED Microinstruction Debug | ❌    | ✅       |
-
----
 
 ## Project Progress
 
@@ -422,7 +366,7 @@ CPU Core         ██████████ 100%
 ALU              ██████████ 100%
 Memory           ██████████ 100%
 Control Unit     ██████████ 100%
-FPGA Testing     ████████░░  80%
+FPGA Testing     ██████████ 100%
 Assembler        ██░░░░░░░░  20%
 ```
 
